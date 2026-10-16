@@ -53,6 +53,13 @@ window.ATPlatform={
   }
 };
 document.addEventListener('click',async event=>{
+  if(!native)return;
+  const anchor=event.target.closest('a[data-bangumi-id]');if(!anchor)return;
+  event.preventDefault();
+  try{await window.__TAURI__.core.invoke('open_bangumi',{id:Number(anchor.dataset.bangumiId)});}
+  catch(e){document.querySelector('#toast').textContent=String(e);document.querySelector('#toast').style.display='block';}
+},true);
+document.addEventListener('click',async event=>{
   const anchor=event.target.closest('a[download]');if(!anchor)return;
   const url=new URL(anchor.href);if(!url.pathname.includes('/api/'))return;
   event.preventDefault();
