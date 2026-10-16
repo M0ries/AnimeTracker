@@ -1,0 +1,17 @@
+import {cp,mkdir,readFile,writeFile,rm} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const out=path.join(root,'dist');
+await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
+for(const name of ['style.css','app-shell.css','minimal.css','manifest.webmanifest','icons'])await cp(path.join(root,'local_app/static',name),path.join(out,name),{recursive:true});
+let html=await readFile(path.join(root,'local_app/static/index.html'),'utf8');
+html=html.replace('<script src="/app.js" defer></script>','<script type="module" src="./bridge.mjs"></script>').replaceAll('="/','="./');
+await writeFile(path.join(out,'index.html'),html);
+const app=(await readFile(path.join(root,'local_app/static/app.js'),'utf8')).replaceAll('src="/icons/','src="./icons/');
+await writeFile(path.join(out,'app.js'),app);
+for(const name of ['bridge.mjs','storage.mjs','runtime.mjs','worker.mjs','sw.js','api.py'])await cp(path.join(root,'portable',name),path.join(out,name));
+await cp(path.join(root,'local_app/store.py'),path.join(out,'store.py'));
+await mkdir(path.join(out,'vendor/pyodide'),{recursive:true});
+for(const name of ['pyodide.mjs','pyodide.asm.mjs','pyodide.asm.wasm','python_stdlib.zip','pyodide-lock.json'])await cp(path.join(root,'node_modules/pyodide',name),path.join(out,'vendor/pyodide',name));
+console.log('Built dist: local assets and bundled Python/WASM runtime.');

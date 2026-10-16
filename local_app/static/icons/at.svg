@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="AT — AnimeTracker">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#42375f"/><stop offset="1" stop-color="#1c192e"/></linearGradient><linearGradient id="a" x2=".7" y2="1"><stop stop-color="#e6d9ff"/><stop offset="1" stop-color="#b69bf4"/></linearGradient></defs>
+<rect x="20" y="20" width="472" height="472" rx="112" fill="url(#bg)"/>
+<rect x="28" y="28" width="456" height="456" rx="105" fill="none" stroke="#ffffff" stroke-opacity=".13" stroke-width="2"/>
+<path d="M91 351 173 157h49l82 194h-55l-14-36h-77l-14 36Zm84-80h44l-22-61Z" fill="url(#a)" fill-rule="evenodd"/>
+<path d="M255 157h167v49h-57v145h-53V206h-57Z" fill="#faf7ff"/>
+<rect x="385" y="92" width="26" height="26" rx="8" fill="#b7e4ca" transform="rotate(12 398 105)"/>
+<path d="M160 402h192" stroke="#b9a1ef" stroke-opacity=".25" stroke-width="5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,47 @@
+# Personal databases and backups
+*.hive
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.bak
+*.backup
+*export*.json
+*backup*.json
+kazumi-history.json
+*password*
+*secret*
+*.zip
+*.csv
+!CSV-清单模板.csv
+initial_data/
+original_project/
+backups/
+exports/
+data/
+# Generated files and local settings
+__pycache__/
+*.py[cod]
+.dart_tool/
+node_modules/
+.venv/
+venv/
+.env
+.env.*
+.DS_Store
+__MACOSX/
+*.log
+# Local application builds
+dist/
+*.app/
+
+# Native build outputs and signing secrets
+src-tauri/target/
+src-tauri/gen/
+*.p12
+*.mobileprovision
+*.keystore
+*.jks
+AnimeTracker-export*

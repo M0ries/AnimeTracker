@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#211e31"><meta name="application-name" content="AnimeTracker"><meta name="apple-mobile-web-app-title" content="AnimeTracker"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="description" content="本地动漫记录工具">
+<title>AnimeTracker</title>
+<link rel="icon" type="image/svg+xml" href="/icons/at.svg"><link rel="icon" type="image/png" sizes="32x32" href="/icons/at-32.png"><link rel="apple-touch-icon" href="/icons/at-180.png"><link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/app-shell.css"><link rel="stylesheet" href="/minimal.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#content">跳到内容</a>
+<aside class="sidebar">
+<a class="brand" href="/" aria-label="AnimeTracker 首页"><img class="brand-icon" src="/icons/at.svg" alt="AT" width="46" height="46"><span>AnimeTracker</span></a>
+<div class="nav-label">导航</div>
+<nav aria-label="主导航">
+<button class="nav active" data-page="library"><span data-icon="library"></span><span>动漫书架</span><b id="nav-count">0</b></button>
+<button class="nav" data-page="timeline"><span data-icon="clock"></span><span>观看时间线</span></button>
+<button class="nav" data-page="stats"><span data-icon="chart"></span><span>数据统计</span></button>
+<button class="nav" data-page="data"><span data-icon="archive"></span><span>导入与备份</span></button>
+</nav>
+
+<div class="sidebar-note"><span class="dot"></span> 本地资料库</div>
+<div class="sidebar-bottom"><button id="theme" class="theme" aria-label="切换深浅主题" aria-pressed="false"><span data-icon="moon"></span><span>深浅主题</span></button><button class="about-button" data-action="about" aria-label="设置"><span data-icon="info"></span></button></div>
+</aside>
+<main><header class="topbar"><span id="breadcrumb">书架</span><div class="topbar-actions"><button class="search-shortcut" data-action="focus-search" aria-label="搜索动漫，快捷键 Command 或 Control 加 K"><span data-icon="search"></span><span>搜索书架</span><kbd>⌘ K</kbd></button><span class="local-label"><i></i> 本地运行</span><button class="topbar-about" data-action="about" aria-label="应用信息和主题设置"><span data-icon="info"></span></button></div></header>
+<div id="content" tabindex="-1"><div class="loading-state"><img src="/icons/at.svg" width="64" height="64" alt="AT"><p>正在加载…</p></div></div>
+<footer><span>AnimeTracker 2.0.0</span></footer></main>
+<dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-top"><h2 id="dialog-title"></h2><button id="close-dialog" class="icon" aria-label="关闭">×</button></div><div id="dialog-body"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div><div id="fatal" role="alert" hidden></div>
+</body></html>

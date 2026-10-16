@@ -1,0 +1,24 @@
+# 同步设计（尚未实现）
+
+## 服务
+
+用户所说的 Cloud Infinite 可能是 InfiniCLOUD。InfiniCLOUD 提供 WebDAV；正式实现前需确认服务名称和 My Page 中的 WebDAV URL。当前版本没有登录、上传、下载、自动同步或连接测试，不保存服务器凭据。
+
+## 边界
+
+- 各平台共用 `local_app/store.py` 和 `portable/api.py`。`portable/runtime.mjs` 串行执行更改，仅在持久化成功后通知界面。
+- 浏览器使用 IndexedDB；原生 App 使用 Rust 命令 `storage_load/storage_save`，存入系统应用资料目录。两者使用递增 revision，阻止同一资料库的旧窗口覆盖新内容。
+- 本地 revision 只防本机并发，不能当成云端同步版本或记录删除标记。
+- 下一阶段在独立 sync adapter 中实现 WebDAV 读写。不要用同步覆盖整个本地 storage.json 的方式合并多设备数据。
+- 使用独立远端目录 `/AnimeTracker/`；不要读写或复用 Kazumi 的同步文件格式，不覆盖 Kazumi 目录。两应用可以使用同一个服务，但不会因此自动共享数据。
+
+## 必须完成后才能上线
+
+1. 版本化同步格式、稳定的记录 ID、每条记录的修改版本和删除标记；数据库升级迁移必须先备份。
+2. 远端 ETag / If-Match 条件写，重试前先读取新状态；实测服务器对条件请求的支持，不能只依赖本机时钟。
+3. 同一记录冲突展示给用户选择，保留两份原始版本，不能静默“最后写入获胜”。
+4. 原生凭据放系统凭据库；Web 端单独处理 CORS 和安全凭据存储，不在源码、日志、导出文件中保存密码。
+5. 离线队列、失败重试、迁移版本检查；先下载校验，再在事务中应用；同步前本地备份。
+6. 多设备离线编辑、删除/编辑冲突、认证过期、网络中断、云端文件损坏测试。
+
+参考：https://infini-cloud.net/en/developer_webdav.html

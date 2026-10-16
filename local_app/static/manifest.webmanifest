@@ -1,0 +1,27 @@
+{
+  "id": "./",
+  "name": "AnimeTracker",
+  "short_name": "AT",
+  "lang": "zh-CN",
+  "description": "本地动漫记录",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#f5f4f8",
+  "theme_color": "#211e31",
+  "icons": [
+    {
+      "src": "./icons/at-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/at-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
