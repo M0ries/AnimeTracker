@@ -127,16 +127,21 @@ class Store:
         v=self.anime_values(data)
         with self.connect() as c:
             old=self.required(c,'anime',id) if id else None
+            bangumi_id=integer(data['bangumi_id'],1,2147483647,True) if 'bangumi_id' in data else (old['bangumi_id'] if old else None)
+            if old and old['bangumi_id']!=bangumi_id and c.execute('SELECT 1 FROM sources WHERE anime_id=?',(id,)).fetchone():
+                raise ValueError('Kazumi 来源条目的 Bangumi ID 不可修改')
+            if bangumi_id and c.execute('SELECT id FROM anime WHERE bangumi_id=? AND id<>?',(bangumi_id,id or '')).fetchone():
+                raise ValueError('这个 Bangumi ID 已用于另一部动漫')
             series_name=text(data.get('series_name',''),500)
             series_id=None
             if series_name:
                 existing=c.execute('SELECT id FROM series WHERE name=? ORDER BY id',(series_name,)).fetchone()
                 series_id=existing[0] if existing else uid()
                 if not existing: self.insert(c,'series',dict(id=series_id,name=series_name))
-            v.update(series_id=series_id,updated_at=now())
+            v.update(series_id=series_id,bangumi_id=bangumi_id,updated_at=now())
             if old: self.update(c,'anime',id,v)
             else:
-                id=uid();v.update(id=id,bangumi_id=None,created_at=now());self.insert(c,'anime',v)
+                id=uid();v.update(id=id,created_at=now());self.insert(c,'anime',v)
         return id
     def round_values(self,data):
         kind=data.get('kind','first')
