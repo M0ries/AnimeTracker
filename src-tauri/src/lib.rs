@@ -3,6 +3,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tauri_plugin_opener::OpenerExt;
 
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
 #[derive(Default, Serialize, Deserialize)]
@@ -53,12 +54,18 @@ fn storage_save(app: tauri::AppHandle, files: BTreeMap<String,String>, revision:
     #[cfg(unix)] { if let Ok(directory)=File::open(&dir) {let _=directory.sync_all();} }
     Ok(snapshot)
 }
+#[tauri::command]
+fn open_bangumi(app: tauri::AppHandle, id: u32) -> Result<(),String> {
+    if id == 0 || id > 2147483647 { return Err("无效的 Bangumi ID".into()); }
+    app.opener().open_url(format!("https://bgm.tv/subject/{id}"), None::<&str>).map_err(|e|e.to_string())
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![storage_load,storage_save])
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![storage_load,storage_save,open_bangumi])
         .run(tauri::generate_context!())
         .expect("AnimeTracker failed to start");
 }
