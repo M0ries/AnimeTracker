@@ -17,6 +17,18 @@ class StoreTests(unittest.TestCase):
   a=self.a();self.s.save_anime({'name':'改名','personal_rating':8.5,'tags':['科幻'],'aliases':['别名'],'notes':'我的评论'},a)
   saved=Store(self.s.path).state()['anime'][0]
   self.assertEqual(saved['personal_rating'],8.5);self.assertEqual(saved['tags'],['科幻']);self.assertEqual(saved['aliases'],['别名'])
+ def test_bangumi_id_for_manual_anime_and_imported_source(self):
+  a=self.a(bangumi_id='123')
+  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+  self.s.save_anime({'name':'改名'},a)
+  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+  with self.assertRaisesRegex(ValueError,'已用于另一部动漫'):
+   self.a('重复 ID',bangumi_id='123')
+  self.assertEqual(self.imp(self.history())['imported'],1)
+  self.assertEqual(len(self.s.state()['anime']),1)
+  with self.assertRaisesRegex(ValueError,'不可修改'):
+   self.s.save_anime({'name':'改名','bangumi_id':'456'},a)
+  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
  def test_seasons_share_series_but_not_identity(self):
   a=self.a();b=self.a('无职转生 第二季');state=self.s.state()
   self.assertNotEqual(a,b);self.assertEqual(len(state['series']),1);self.assertEqual(state['stats']['works'],1);self.assertEqual(state['stats']['seasons'],2)
