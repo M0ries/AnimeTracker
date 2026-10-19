@@ -20,6 +20,15 @@ class StoreTests(unittest.TestCase):
  def test_bangumi_id_for_manual_anime_and_imported_source(self):
   a=self.a(bangumi_id='123')
   self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+  self.s.save_anime({'name':'改名'},a)
+  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+  with self.assertRaisesRegex(ValueError,'已用于另一部动漫'):
+   self.a('重复 ID',bangumi_id='123')
+  self.assertEqual(self.imp(self.history())['imported'],1)
+  self.assertEqual(len(self.s.state()['anime']),1)
+  with self.assertRaisesRegex(ValueError,'不可修改'):
+   self.s.save_anime({'name':'改名','bangumi_id':'456'},a)
+  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
  def test_bangumi_metadata_fills_blanks_without_touching_personal_records(self):
   a=self.s.save_anime({'name':'我的标题','bangumi_id':123,'notes':'私人笔记','status':'watching','personal_rating':9})
   r=self.r(a);self.s.add_session(r,{'episode':1})
@@ -33,15 +42,27 @@ class StoreTests(unittest.TestCase):
    self.s.update_bangumi(a,{**subject,'id':456})
   with self.assertRaisesRegex(ValueError,'不是动画'):
    self.s.update_bangumi(a,{**subject,'type':1})
-  self.s.save_anime({'name':'改名'},a)
-  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+ def test_search_selection_creates_and_links_without_overwriting_records(self):
+  subject={'id':140001,'type':2,'name':'Re:ゼロ','name_cn':'从零开始','date':'2016-04-03','eps':25,
+           'summary':'作品简介','images':{'large':'https://example.org/re0.jpg'}}
+  aid=self.s.save_bangumi(subject)['id']
+  created=self.s.state()['anime'][0]
+  self.assertEqual((created['bangumi_id'],created['release_year'],created['total_episodes']),(140001,2016,25))
+  self.assertEqual(created['name_cn'],'从零开始')
   with self.assertRaisesRegex(ValueError,'已用于另一部动漫'):
-   self.a('重复 ID',bangumi_id='123')
-  self.assertEqual(self.imp(self.history())['imported'],1)
-  self.assertEqual(len(self.s.state()['anime']),1)
-  with self.assertRaisesRegex(ValueError,'不可修改'):
-   self.s.save_anime({'name':'改名','bangumi_id':'456'},a)
-  self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+   self.s.save_bangumi(subject)
+  manual=self.s.save_anime({'name':'我起的名字','notes':'保留','personal_rating':8,'status':'completed'})
+  rid=self.s.save_round(manual,{'kind':'first','status':'completed','progress':2})
+  self.s.save_bangumi({**subject,'id':140002},manual)
+  row=next(x for x in self.s.state()['anime'] if x['id']==manual)
+  self.assertEqual((row['name'],row['notes'],row['personal_rating'],row['status']),('我起的名字','保留',8,'completed'))
+  self.assertEqual(row['bangumi_id'],140002)
+  self.assertEqual(len([x for x in self.s.state()['rounds'] if x['anime_id']==manual]),1)
+  with self.assertRaisesRegex(ValueError,'已有不同'):
+   self.s.save_bangumi({**subject,'id':140003},manual)
+  with self.assertRaisesRegex(ValueError,'不是动画'):
+   self.s.save_bangumi({**subject,'type':1})
+  self.assertEqual(len(self.s.state()['anime']),2)
  def test_seasons_share_series_but_not_identity(self):
   a=self.a();b=self.a('无职转生 第二季');state=self.s.state()
   self.assertNotEqual(a,b);self.assertEqual(len(state['series']),1);self.assertEqual(state['stats']['works'],1);self.assertEqual(state['stats']['seasons'],2)

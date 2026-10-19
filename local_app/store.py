@@ -144,36 +144,50 @@ class Store:
                 id=uid();v.update(id=id,created_at=now());self.insert(c,'anime',v)
         return id
     def update_bangumi(self,id,subject):
-        """Fill missing catalog fields without changing the user's records."""
-        if not isinstance(subject,dict): raise ValueError('Bangumi 资料格式不正确')
+        """Refresh a linked subject, rejecting a different subject ID."""
         with self.connect() as c:
             old=self.required(c,'anime',id)
-            if not old['bangumi_id'] or subject.get('id')!=old['bangumi_id'] or subject.get('type')!=2:
+            if not old['bangumi_id'] or not isinstance(subject,dict) or subject.get('id')!=old['bangumi_id']:
                 raise ValueError('Bangumi 条目 ID 不一致或不是动画')
-            images=subject.get('images') or {}
-            if not isinstance(images,dict): images={}
-            date_value=subject.get('date') or ''
-            fields={
-                'name':subject.get('name'), 'name_cn':subject.get('name_cn'),
-                'description':subject.get('summary'), 'cover':images.get('large') or images.get('common'),
-                'release_year':int(date_value[:4]) if isinstance(date_value,str) and re.match(r'^\d{4}(?:-|$)',date_value) else None,
-                'total_episodes':subject.get('eps') if isinstance(subject.get('eps'),int) and not isinstance(subject.get('eps'),bool) and subject['eps']>0 else None,
-            }
-            changes={}
-            for key,value in fields.items():
-                if old[key] in ('',None) and value not in ('',None):
-                    changes[key]=value
-            if changes:
+        return self.save_bangumi(subject,id)
+    def save_bangumi(self,subject,id=None):
+        """Create or link an anime and fill only missing catalog fields atomically."""
+        if not isinstance(subject,dict): raise ValueError('Bangumi 资料格式不正确')
+        bid=integer(subject.get('id'),1,2147483647)
+        if subject.get('type')!=2: raise ValueError('Bangumi 条目不是动画')
+        images=subject.get('images') or {}
+        if not isinstance(images,dict): images={}
+        date_value=subject.get('date') or ''
+        fields={
+            'name':subject.get('name'), 'name_cn':subject.get('name_cn'),
+            'description':subject.get('summary'), 'cover':images.get('large') or images.get('common'),
+            'release_year':int(date_value[:4]) if isinstance(date_value,str) and re.match(r'^\d{4}(?:-|$)',date_value) else None,
+            'total_episodes':subject.get('eps') if isinstance(subject.get('eps'),int) and not isinstance(subject.get('eps'),bool) and subject['eps']>0 else None,
+        }
+        with self.connect() as c:
+            old=self.required(c,'anime',id) if id else None
+            if old and old['bangumi_id'] not in (None,bid):
+                raise ValueError('已有不同的 Bangumi ID，请先核对条目')
+            if c.execute('SELECT 1 FROM anime WHERE bangumi_id=? AND id<>?',(bid,id or '')).fetchone():
+                raise ValueError('这个 Bangumi ID 已用于另一部动漫')
+            if old:
+                changes={key:value for key,value in fields.items() if old[key] in ('',None) and value not in ('',None)}
                 data={key:old[key] for key in ('name','name_cn','cover','description','release_year','season','total_episodes','status','personal_rating','notes')}
                 data['aliases']=json.loads(old['aliases']);data['tags']=json.loads(old['tags'])
                 data.update(changes)
                 normalized=self.anime_values(data)
                 changes={key:normalized[key] for key in changes}
                 changed=list(changes)
-                changes['updated_at']=now()
-                self.update(c,'anime',id,changes)
-                return {'updated':changed}
-            return {'updated':[]}
+                if old['bangumi_id'] is None: changes['bangumi_id']=bid
+                if changes:
+                    changes['updated_at']=now();self.update(c,'anime',id,changes)
+                return {'id':id,'updated':changed}
+            data={key:value for key,value in fields.items() if value not in ('',None)}
+            if not data.get('name'): data['name']=data.get('name_cn','')
+            values=self.anime_values(data)
+            id=uid();values.update(id=id,series_id=None,bangumi_id=bid,created_at=now(),updated_at=now())
+            self.insert(c,'anime',values)
+            return {'id':id,'updated':list(data)}
     def round_values(self,data):
         kind=data.get('kind','first')
         if kind not in ('first','rewatch','imported'): raise ValueError('观看轮次类型无效')

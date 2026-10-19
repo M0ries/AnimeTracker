@@ -26,6 +26,7 @@ let viewMode=localStorage.getItem('at.view')==='list'?'list':'grid';
 let toastTimer;
 function toast(msg){$('#toast').textContent=msg;$('#toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').style.display='none',4500);}
 async function api(path,body){const r=await fetch('/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-AnimeTracker-Token':state.csrf_token},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'操作失败');return d;}
+async function bangumiFetch(url,options={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);try{return await fetch(url,{...options,signal:controller.signal});}finally{clearTimeout(timer);}}
 async function load(){const r=await fetch('/api/state');const result=await r.json();if(!r.ok)throw Error(result.error||'无法读取本地数据库');state=result;$('#nav-count').textContent=state.anime.length;selected=new Set([...selected].filter(id=>state.anime.some(a=>a.id===id)));render();}
 const title=a=>a.name_cn||a.name;
 const anime=id=>state.anime.find(a=>a.id===id);
@@ -46,7 +47,7 @@ function render(){
 
 function renderLibrary(){
  const counts=Object.fromEntries(Object.keys(labels).map(k=>[k,state.anime.filter(a=>a.status===k).length]));
- $('#content').innerHTML=heading('书架','',`<button data-action="go-data">${icon('import')} 导入记录</button><button class="primary" data-action="new-anime">${icon('plus')} 添加动漫</button>`)+
+ $('#content').innerHTML=heading('书架','',`<button data-action="go-data">${icon('import')} 导入记录</button><button data-action="bangumi-search">${icon('search')} 搜索 Bangumi</button><button class="primary" data-action="new-anime">${icon('plus')} 添加动漫</button>`)+
  `<div class="overview">${statCard('动漫',state.stats.seasons,'部','▦',true)}${statCard('正在看',counts.watching,'部','◷')}${statCard('已看完',counts.completed,'部','✓')}${statCard('重看',state.stats.rewatches,'次','↻')}</div>
  <div class="toolbar"><div class="tabs">${[['all','全部'],...Object.entries(labels)].map(([k,l])=>`<button data-filter="${k}" class="${filter===k?'selected':''}">${l} <small>${k==='all'?state.anime.length:counts[k]}</small></button>`).join('')}</div><label class="checkbox-label"><input type="checkbox" id="remote-covers" ${remote?'checked':''}>加载远程封面</label></div>
  <div class="search-row"><div class="search">${icon('search')}<input id="search" aria-label="搜索动漫" placeholder="搜索名称、别名、系列或笔记…" value="${esc(query)}"></div><select id="tag-filter" aria-label="标签筛选"><option value="">全部分类</option>${[...new Set(state.anime.flatMap(a=>a.tags))].sort().map(t=>`<option ${tag===t?'selected':''}>${esc(t)}</option>`).join('')}</select><select id="sort" aria-label="排序">${[['recent','最近观看'],['name','名称顺序'],['rating','个人评分'],['year','播出年份'],['added','最近添加']].map(([k,l])=>`<option value="${k}" ${sort===k?'selected':''}>${l}</option>`).join('')}</select><div class="view-switch" aria-label="书架显示方式"><button data-view="grid" aria-label="网格视图" aria-pressed="${viewMode==='grid'}" class="${viewMode==='grid'?'selected':''}">${icon('library')}</button><button data-view="list" aria-label="列表视图" aria-pressed="${viewMode==='list'}" class="${viewMode==='list'?'selected':''}">${icon('list')}</button></div></div><div id="book-results"></div>`;
@@ -85,19 +86,46 @@ function editAnime(id){const a=id?anime(id):{name:'',name_cn:'',aliases:[],tags:
  bindForm(async d=>{d.tags=d.tags.split(/[,，]/).map(s=>s.trim()).filter(Boolean);d.aliases=d.aliases.split(/[,，]/).map(s=>s.trim()).filter(Boolean);const r=await api('anime/save',{id,data:d});await load();detail(r.id);toast('动漫已保存');});
 }
 function detail(id){const a=anime(id);if(!a)return;const rs=rounds(a).slice().sort((a,b)=>b.created_at.localeCompare(a.created_at));
- modal('动漫档案',`<div class="detail-head"><div class="mini-cover">${esc([...title(a)][0]||'A')}${remote&&a.cover?`<img src="${esc(a.cover)}" alt="" referrerpolicy="no-referrer">`:''}</div><div><h2>${esc(title(a))}</h2><p class="muted">${esc(a.name)} · ${a.release_year||'年份未知'} ${a.season?'· '+esc(a.season):''}</p><p><span class="badge">${labels[a.status]}</span> ${a.personal_rating!==null?'★ '+a.personal_rating+' / 10':''}</p>${series(a)?`<p class="muted">系列：${esc(series(a))}</p>`:''}</div></div><div>${a.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>${a.description?`<p class="detail-description">${esc(a.description)}</p>`:''}${a.notes?`<p class="detail-description">个人笔记：${esc(a.notes)}</p>`:''}<div class="actions">${bangumiUrl(a.bangumi_id)?`<a class="button" href="${bangumiUrl(a.bangumi_id)}" data-bangumi-id="${a.bangumi_id}" target="_blank" rel="noopener noreferrer">Bangumi 条目 ↗</a>`:''}${bangumiUrl(a.bangumi_id)?`<button data-bangumi-refresh="${esc(id)}">获取 Bangumi 资料</button>`:''}<button data-edit-anime="${esc(id)}">编辑资料</button><button class="primary" data-new-round="${esc(id)}">＋ 添加首看 / 重看</button><button class="small" data-merge="${esc(id)}">人工合并</button><button class="small danger" data-delete-anime="${esc(id)}">删除动漫</button></div><div class="hr"></div><h3>观看轮次与来源</h3><p class="helper">首看和每次重看分别保存。来源快照不代表一个已确认的观看轮次。</p>${rs.map(r=>{const sessions=state.sessions.filter(s=>s.round_id===r.id).sort((a,b)=>(b.watched_at||'').localeCompare(a.watched_at||''));const src=state.sources.find(s=>s.round_id===r.id);return `<section class="round"><div class="round-header"><strong>${kindLabels[r.kind]} <span class="badge">${r.kind==='imported'?'进度快照':labels[r.status]}</span></strong><span>${r.progress} / ${a.total_episodes??'?'} 集</span></div><div class="round-dates"><span>开始 ${dateFmt(r.started_at)}</span><span>结束 ${dateFmt(r.finished_at)}</span><span>最近 ${dateFmt(r.last_watched_at)}</span></div>${src?`<p class="helper break">来源：${esc(src.source_key)}</p>`:''}${r.notes?`<p class="muted">${esc(r.notes)}</p>`:''}${r.kind!=='imported'?`<div class="actions"><button class="small" data-edit-round="${esc(r.id)}">修改日期 / 进度</button><button class="small" data-add-session="${esc(r.id)}">记录一集</button><button class="text small danger" data-delete-round="${esc(r.id)}">删除轮次</button></div>`:''}<details><summary class="helper">${sessions.length} 条${r.kind==='imported'?'来源进度':'观看'}记录</summary>${sessions.map(s=>`<div class="session-row"><span>第 ${s.episode} 集 · ${dateFmt(s.watched_at)} ${s.progress_ms!==null?'· 播放至 '+Math.floor(s.progress_ms/60000)+' 分钟':''}${s.notes&&!s.source_id?' · '+esc(s.notes):''}</span>${!s.source_id?`<span class="actions"><button class="text small" data-edit-session="${esc(s.id)}">编辑</button><button class="text small danger" data-delete-session="${esc(s.id)}">删除</button></span>`:''}</div>`).join('')}</details></section>`;}).join('')||'<p class="muted">暂无观看轮次。</p>'}`);
+ modal('动漫档案',`<div class="detail-head"><div class="mini-cover">${esc([...title(a)][0]||'A')}${remote&&a.cover?`<img src="${esc(a.cover)}" alt="" referrerpolicy="no-referrer">`:''}</div><div><h2>${esc(title(a))}</h2><p class="muted">${esc(a.name)} · ${a.release_year||'年份未知'} ${a.season?'· '+esc(a.season):''}</p><p><span class="badge">${labels[a.status]}</span> ${a.personal_rating!==null?'★ '+a.personal_rating+' / 10':''}</p>${series(a)?`<p class="muted">系列：${esc(series(a))}</p>`:''}</div></div><div>${a.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>${a.description?`<p class="detail-description">${esc(a.description)}</p>`:''}${a.notes?`<p class="detail-description">个人笔记：${esc(a.notes)}</p>`:''}<div class="actions">${bangumiUrl(a.bangumi_id)?`<a class="button" href="${bangumiUrl(a.bangumi_id)}" data-bangumi-id="${a.bangumi_id}" target="_blank" rel="noopener noreferrer">Bangumi 条目 ↗</a>`:''}${bangumiUrl(a.bangumi_id)?`<button data-bangumi-refresh="${esc(id)}">获取 Bangumi 资料</button>`:''}${!a.bangumi_id?`<button data-bangumi-search="${esc(id)}">关联 Bangumi</button>`:''}<button data-edit-anime="${esc(id)}">编辑资料</button><button class="primary" data-new-round="${esc(id)}">＋ 添加首看 / 重看</button><button class="small" data-merge="${esc(id)}">人工合并</button><button class="small danger" data-delete-anime="${esc(id)}">删除动漫</button></div><div class="hr"></div><h3>观看轮次与来源</h3><p class="helper">首看和每次重看分别保存。来源快照不代表一个已确认的观看轮次。</p>${rs.map(r=>{const sessions=state.sessions.filter(s=>s.round_id===r.id).sort((a,b)=>(b.watched_at||'').localeCompare(a.watched_at||''));const src=state.sources.find(s=>s.round_id===r.id);return `<section class="round"><div class="round-header"><strong>${kindLabels[r.kind]} <span class="badge">${r.kind==='imported'?'进度快照':labels[r.status]}</span></strong><span>${r.progress} / ${a.total_episodes??'?'} 集</span></div><div class="round-dates"><span>开始 ${dateFmt(r.started_at)}</span><span>结束 ${dateFmt(r.finished_at)}</span><span>最近 ${dateFmt(r.last_watched_at)}</span></div>${src?`<p class="helper break">来源：${esc(src.source_key)}</p>`:''}${r.notes?`<p class="muted">${esc(r.notes)}</p>`:''}${r.kind!=='imported'?`<div class="actions"><button class="small" data-edit-round="${esc(r.id)}">修改日期 / 进度</button><button class="small" data-add-session="${esc(r.id)}">记录一集</button><button class="text small danger" data-delete-round="${esc(r.id)}">删除轮次</button></div>`:''}<details><summary class="helper">${sessions.length} 条${r.kind==='imported'?'来源进度':'观看'}记录</summary>${sessions.map(s=>`<div class="session-row"><span>第 ${s.episode} 集 · ${dateFmt(s.watched_at)} ${s.progress_ms!==null?'· 播放至 '+Math.floor(s.progress_ms/60000)+' 分钟':''}${s.notes&&!s.source_id?' · '+esc(s.notes):''}</span>${!s.source_id?`<span class="actions"><button class="text small" data-edit-session="${esc(s.id)}">编辑</button><button class="text small danger" data-delete-session="${esc(s.id)}">删除</button></span>`:''}</div>`).join('')}</details></section>`;}).join('')||'<p class="muted">暂无观看轮次。</p>'}`);
 }
 async function refreshBangumi(id){
  const a=anime(id),subjectId=a?.bangumi_id;
  if(!Number.isSafeInteger(subjectId)||subjectId<=0)throw Error('请先填写 Bangumi 条目 ID');
  let response;
- try{response=await fetch(`https://api.bgm.tv/v0/subjects/${subjectId}`,{signal:AbortSignal.timeout(12000)});}
+ try{response=await bangumiFetch(`https://api.bgm.tv/v0/subjects/${subjectId}`);}
  catch(err){throw Error('无法连接 Bangumi，请检查网络后重试');}
  if(!response.ok)throw Error(response.status===404?'Bangumi 没有找到该条目':`Bangumi 请求失败（${response.status}）`);
  const subject=await response.json();
  const result=await api('anime/bangumi',{id,subject});
  await load();detail(id);
  toast(result.updated.length?`已补充 ${result.updated.length} 项 Bangumi 资料`:'已有资料完整，未改动个人记录');
+}
+function searchBangumi(targetId){
+ const existing=targetId?anime(targetId):null;
+ modal(existing?'关联 Bangumi':'从 Bangumi 添加',`<form id="edit-form"><label class="field">动画名称<input name="keyword" required maxlength="100" value="${esc(existing?.name_cn||existing?.name||'')}" placeholder="输入中文名或原名"></label><div class="actions"><button class="primary" type="submit">搜索动画</button></div><p class="form-error" role="alert"></p></form><div id="bangumi-results" aria-live="polite"></div>`);
+ bindForm(async d=>{
+  const keyword=d.keyword.trim();if(!keyword)throw Error('请输入动画名称');
+  const box=$('#bangumi-results');box.textContent='正在搜索…';
+  let response;
+  try{response=await bangumiFetch('https://api.bgm.tv/v0/search/subjects?limit=10',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword,filter:{type:[2]}})});}
+  catch{box.textContent='';throw Error('无法连接 Bangumi，请检查网络后重试');}
+  if(!response.ok){box.textContent='';throw Error(`Bangumi 搜索失败（${response.status}）`);}
+  const payload=await response.json();
+  const results=Array.isArray(payload.data)?payload.data.filter(x=>x.type===2&&Number.isSafeInteger(x.id)&&x.id>0):[];
+  box.innerHTML=results.length?`<p class="helper">请核对季度和年份，选择正确的条目。</p>${results.map(x=>`<div class="bangumi-result"><div><strong>${esc(x.name_cn||x.name)}</strong><p class="muted">${esc(x.name)} · ${esc(x.date||'日期未知')} · ${esc(x.eps||'?')} 集 · ID ${x.id}</p></div><div class="actions"><a class="button small" href="${bangumiUrl(x.id)}" target="_blank" rel="noopener noreferrer">查看 ↗</a><button class="small primary" data-bangumi-pick="${x.id}" data-bangumi-target="${esc(targetId||'')}">选择</button></div></div>`).join('')}`:'<p class="muted">未找到匹配的动画。可以换个名称，或手动填写 Bangumi ID。</p>';
+ });
+}
+async function pickBangumi(subjectId,targetId){
+ const existing=targetId?anime(targetId):null;
+ if(existing?.bangumi_id)throw Error('这部动漫已有 Bangumi ID');
+ let response;
+ try{response=await bangumiFetch(`https://api.bgm.tv/v0/subjects/${subjectId}`);}
+ catch{throw Error('无法读取 Bangumi 条目，请检查网络后重试');}
+ if(!response.ok)throw Error(`读取 Bangumi 条目失败（${response.status}）`);
+ const subject=await response.json();
+ if(subject.id!==subjectId||subject.type!==2)throw Error('Bangumi 返回的条目不一致或不是动画');
+ const result=await api('anime/bangumi/link',{id:targetId||null,subject});
+ await load();detail(result.id);toast(existing?'已关联 Bangumi，个人记录已保留':'已从 Bangumi 添加动漫');
 }
 function editRound(aid,rid){const a=anime(aid),r=rid?state.rounds.find(r=>r.id===rid):{kind:rounds(a).some(r=>r.kind!=='imported')?'rewatch':'first',status:'watching',progress:0};
  modal(rid?'修改观看轮次':'新增观看轮次',`<p class="muted">${esc(title(a))} · 新轮次会保留以前的观看日期和进度。</p><form id="edit-form"><div class="form-grid"><label class="field">轮次类型<select name="kind"><option value="first" ${r.kind==='first'?'selected':''}>首次观看</option><option value="rewatch" ${r.kind==='rewatch'?'selected':''}>重看</option></select></label>${statusSelect(r.status)}${field('开始日期（未知可留空）','started_at',dateInput(r.started_at),'date')}${field('结束日期（未知可留空）','finished_at',dateInput(r.finished_at),'date')}${field('最近观看日期','last_watched_at',dateInput(r.last_watched_at),'date')}${field('进度：已看到第几集','progress',r.progress,'number',false,`min="0" max="${a.total_episodes||100000}" required`)}<label class="field full">轮次笔记<textarea name="notes">${esc(r.notes)}</textarea></label></div>${formFooter()}</form>`);
@@ -111,6 +139,7 @@ async function downloadBytes(b64,name){const bytes=Uint8Array.from(atob(b64),c=>
 function toBase64(buffer){const b=new Uint8Array(buffer);let str='';for(let i=0;i<b.length;i+=32768)str+=String.fromCharCode(...b.subarray(i,i+32768));return btoa(str);}
 async function act(action){
  if(action==='new-anime')editAnime();
+ else if(action==='bangumi-search')searchBangumi();
  else if(action==='reset-filters'){filter='all';query='';tag='';pageNum=1;renderLibrary();}
  else if(action==='focus-search'){if(page!=='library'){page='library';render();}$('#search').focus();$('#search').select();}
  else if(action==='about')modal('设置',`<div class="about-head"><img src="/icons/at.svg" alt="AT"><div><h2>AnimeTracker</h2><p>2.0.0</p></div></div><div class="actions"><button data-action="toggle-theme">切换深浅主题</button></div><div class="hr"></div><p class="muted">同步：尚未启用</p><p class="helper">当前记录保存在此设备。可通过“数据”导出或迁移资料库。</p><div class="about-shortcuts"><span><kbd>⌘ / Ctrl K</kbd> 搜索</span><span><kbd>Esc</kbd> 关闭</span></div>`);
@@ -135,6 +164,8 @@ document.addEventListener('click',async e=>{
   if(b.dataset.filter){filter=b.dataset.filter;pageNum=1;renderLibrary();return;}
   if(b.dataset.open){detail(b.dataset.open);return;}
   if(b.dataset.editAnime){editAnime(b.dataset.editAnime);return;}
+  if(b.dataset.bangumiSearch){searchBangumi(b.dataset.bangumiSearch);return;}
+  if(b.dataset.bangumiPick){b.disabled=true;try{await pickBangumi(Number(b.dataset.bangumiPick),b.dataset.bangumiTarget);}finally{b.disabled=false;}return;}
   if(b.dataset.bangumiRefresh){b.disabled=true;try{await refreshBangumi(b.dataset.bangumiRefresh);}finally{b.disabled=false;}return;}
   if(b.dataset.newRound){editRound(b.dataset.newRound);return;}
   if(b.dataset.editRound){const r=state.rounds.find(r=>r.id===b.dataset.editRound);editRound(r.anime_id,r.id);return;}
