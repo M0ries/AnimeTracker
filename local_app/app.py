@@ -62,6 +62,7 @@ class Handler(BaseHTTPRequestHandler):
             s=self.server.store;p=urlparse(self.path).path
             if p=='/api/anime/save': result={'id':s.save_anime(d.get('data',{}),d.get('id'))}
             elif p=='/api/anime/bangumi': result=s.update_bangumi(d['id'],d['subject'])
+            elif p=='/api/anime/bangumi/link': result=s.save_bangumi(d['subject'],d.get('id'))
             elif p=='/api/round/save':result={'id':s.save_round(d['anime_id'],d.get('data',{}),d.get('id'))}
             elif p=='/api/session/edit':result={'id':s.edit_session(d['id'],d.get('data',{}))}
             elif p=='/api/session/add':result={'id':s.add_session(d['round_id'],d.get('data',{}))}
