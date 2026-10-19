@@ -6,6 +6,8 @@ InfiniCLOUD WebDAV 自身就是远端存储和认证入口。个人使用 AT 不
 
 纯网页版从 GitHub Pages 直接连接另一个域名的 WebDAV，需要 InfiniCLOUD 为相应请求提供浏览器 CORS 许可（至少实际测试认证、读取和条件写入）。官方 WebDAV 说明没有明确保证这点，不能把其网页文件管理器可用等同于第三方网页可直连。如果 CORS 不允许，才需要一个同源代理，或者改用原生 App；代理也必须妥善保管凭据。若允许直连，用户可以选择每次输入专用应用密码，或在设备上持久保存以免重复输入；网页保存凭据比系统凭据库更容易受恶意脚本和设备共用影响，不能把密码放在源码、公开仓库或不加密的同步数据里。
 
+2026-10-18 实测：用户的 `https://ajiro.infini-cloud.net/dav/` 对 `Origin: https://m0ries.github.io` 的无凭据 `OPTIONS` 预检（分别请求 `PUT` + `Authorization, Content-Type, If-Match` 及 `PROPFIND` + `Authorization, Depth`）返回 HTTP 200，但响应不含 `Access-Control-Allow-Origin`、`Access-Control-Allow-Methods`、`Access-Control-Allow-Headers`。带相同 Origin 的无凭据 GET 返回 401，也没有跨域响应头。因此当前 GitHub Pages 网页不能直接用浏览器 Fetch API 访问此 WebDAV；未使用账号密码，也未触碰任何文件。服务配置可能变化，上线前重新验证。
+
 Bangumi 公共作品资料直接请求其公开 API，不参与个人记录同步；Bangumi 账号收藏的双向写入属于另一个功能，需要 OAuth 授权和字段映射。
 
 ## 服务

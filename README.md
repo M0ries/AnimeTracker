@@ -34,7 +34,7 @@
 
 项目含完整静态网页和离线资源。将源码提交到 GitHub 后，打开 **Settings → Pages → Build and deployment → Source: GitHub Actions**，再到 **Actions → Publish web app → Run workflow**。成功后 Pages 地址通常是 `https://用户名.github.io/仓库名/`。使用 HTTPS 打开一次并等待离线资源下载完成，就可以离线使用；iPhone Safari 的分享菜单选择“添加到主屏幕”，Mac / Windows 可用浏览器的“安装应用”功能。无需 iOS 签名，日常不用打开终端。
 
-**这个版本没有账号登录或跨设备同步。** 网页版的数据保存在当前浏览器的 IndexedDB；换手机、浏览器、清理网站数据，记录不会自动出现。要迁移，在旧设备“数据 → 完整 JSON”导出，在新设备导入。定期保存一份 `.db` 备份。公共 GitHub Pages 只托管程序文件，**不要上传个人 JSON、数据库或 WebDAV 密码**。未来可直接用 InfiniCLOUD WebDAV 同步原生 App；纯网页版能否直连取决于服务商的 CORS 支持。详见 `docs/SYNC.md`。
+**这个版本没有账号登录或跨设备同步。** 网页版的数据保存在当前浏览器的 IndexedDB；换手机、浏览器、清理网站数据，记录不会自动出现。要迁移，在旧设备“数据 → 完整 JSON”导出，在新设备导入。定期保存一份 `.db` 备份。公共 GitHub Pages 只托管程序文件，**不要上传个人 JSON、数据库或 WebDAV 密码**。未来可直接用 InfiniCLOUD WebDAV 同步原生 App；已实测当前 InfiniCLOUD WebDAV 未许可 GitHub Pages 跨域直连，纯网页版同步需要代理或其他同源服务。详见 `docs/SYNC.md`。
 
 本地查看网页版开发预览：`npm ci` 后 `npm run dev`，打开 `http://127.0.0.1:1420`。初次安装依赖和发布需要终端；日常访问网站不需要。
 
