@@ -20,6 +20,19 @@ class StoreTests(unittest.TestCase):
  def test_bangumi_id_for_manual_anime_and_imported_source(self):
   a=self.a(bangumi_id='123')
   self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
+ def test_bangumi_metadata_fills_blanks_without_touching_personal_records(self):
+  a=self.s.save_anime({'name':'我的标题','bangumi_id':123,'notes':'私人笔记','status':'watching','personal_rating':9})
+  r=self.r(a);self.s.add_session(r,{'episode':1})
+  subject={'id':123,'type':2,'name':'原名','name_cn':'中文名','summary':'作品简介','date':'2026-01-01','eps':12,'images':{'large':'https://example.org/cover.jpg'}}
+  self.assertEqual(set(self.s.update_bangumi(a,subject)['updated']),{'name_cn','description','release_year','total_episodes','cover'})
+  row=self.s.state()['anime'][0]
+  self.assertEqual((row['name'],row['notes'],row['status'],row['personal_rating']),('我的标题','私人笔记','watching',9))
+  self.assertEqual(len(self.s.state()['sessions']),1)
+  self.assertEqual(self.s.update_bangumi(a,subject)['updated'],[])
+  with self.assertRaisesRegex(ValueError,'ID 不一致'):
+   self.s.update_bangumi(a,{**subject,'id':456})
+  with self.assertRaisesRegex(ValueError,'不是动画'):
+   self.s.update_bangumi(a,{**subject,'type':1})
   self.s.save_anime({'name':'改名'},a)
   self.assertEqual(self.s.state()['anime'][0]['bangumi_id'],123)
   with self.assertRaisesRegex(ValueError,'已用于另一部动漫'):
