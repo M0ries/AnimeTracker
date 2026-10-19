@@ -20,7 +20,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Referrer-Policy','no-referrer')
-        self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http: data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+        self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: http: data:; connect-src 'self' https://api.bgm.tv; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
         if filename:self.send_header('Content-Disposition',f'attachment; filename="{filename}"')
         self.end_headers();self.wfile.write(body)
     def host_ok(self):
@@ -61,6 +61,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(d,dict):raise ValueError('请求须为 JSON 对象')
             s=self.server.store;p=urlparse(self.path).path
             if p=='/api/anime/save': result={'id':s.save_anime(d.get('data',{}),d.get('id'))}
+            elif p=='/api/anime/bangumi': result=s.update_bangumi(d['id'],d['subject'])
             elif p=='/api/round/save':result={'id':s.save_round(d['anime_id'],d.get('data',{}),d.get('id'))}
             elif p=='/api/session/edit':result={'id':s.edit_session(d['id'],d.get('data',{}))}
             elif p=='/api/session/add':result={'id':s.add_session(d['round_id'],d.get('data',{}))}

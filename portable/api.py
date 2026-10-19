@@ -40,6 +40,7 @@ def dispatch(path, d):
         return dict(s.state(), csrf_token='local', database_path='此设备 · 应用资料库')
     if path == 'health': return {'application':'AnimeTracker','version':'2.0.0'}
     if path == 'anime/save': return {'id':s.save_anime(d.get('data',{}),d.get('id'))}
+    if path == 'anime/bangumi': return s.update_bangumi(d['id'],d['subject'])
     if path == 'round/save': return {'id':s.save_round(d['anime_id'],d.get('data',{}),d.get('id'))}
     if path == 'session/edit': return {'id':s.edit_session(d['id'],d.get('data',{}))}
     if path == 'session/add': return {'id':s.add_session(d['round_id'],d.get('data',{}))}
