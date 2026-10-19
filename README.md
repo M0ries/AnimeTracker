@@ -34,6 +34,12 @@
 
 项目含完整静态网页和离线资源。将源码提交到 GitHub 后，打开 **Settings → Pages → Build and deployment → Source: GitHub Actions**，再到 **Actions → Publish web app → Run workflow**。成功后 Pages 地址通常是 `https://用户名.github.io/仓库名/`。使用 HTTPS 打开一次并等待离线资源下载完成，就可以离线使用；iPhone Safari 的分享菜单选择“添加到主屏幕”，Mac / Windows 可用浏览器的“安装应用”功能。无需 iOS 签名，日常不用打开终端。
 
+### 网页本地版
+
+这就是上述网站安装后的模式：界面和运行时由浏览器缓存，个人记录存于当前设备的 IndexedDB；离线打开仍可使用。初次安装及版本更新需要联网。请不要清理该网站的数据或卸载浏览器，除非已在“数据”页导出完整 JSON 备份。它不会自动同步至另一台设备。
+
+如需下载可自行托管的静态文件，在 GitHub **Actions → Package offline web app → Run workflow**，从 Artifacts 下载 `AnimeTracker-Web-Local`。这些文件必须由 HTTPS 站点或本机 HTTP 服务提供，不能双击 `index.html` 运行；直接访问现有 Pages 站点并安装到主屏幕更省事。
+
 **这个版本没有账号登录或跨设备同步。** 网页版的数据保存在当前浏览器的 IndexedDB；换手机、浏览器、清理网站数据，记录不会自动出现。要迁移，在旧设备“数据 → 完整 JSON”导出，在新设备导入。定期保存一份 `.db` 备份。公共 GitHub Pages 只托管程序文件，**不要上传个人 JSON、数据库或 WebDAV 密码**。未来可直接用 InfiniCLOUD WebDAV 同步原生 App；已实测当前 InfiniCLOUD WebDAV 未许可 GitHub Pages 跨域直连，纯网页版同步需要代理或其他同源服务。详见 `docs/SYNC.md`。
 
 本地查看网页版开发预览：`npm ci` 后 `npm run dev`，打开 `http://127.0.0.1:1420`。初次安装依赖和发布需要终端；日常访问网站不需要。
@@ -65,22 +71,20 @@ Windows 使用同样的 npm 命令，构建环境还需 Microsoft C++ Build Tool
 
 ## iPhone / iPad
 
-iOS 的构建与签名在 Mac + Xcode 上完成：
+iOS 的构建与签名在 Mac + Xcode 上完成。项目提供 `scripts/build_ios_ipa.sh`，运行前先在 Xcode 登录 Apple ID，设置 Signing Team，并确认 `io.animetracker.app` 这个 Bundle ID 可由你的团队使用（否则先改为自己的唯一 ID）：
 
 ```sh
-npm ci
-npm run tauri -- ios init
+sh scripts/build_ios_ipa.sh
 ```
 
-生成项目后，将 `src-tauri/PrivacyInfo.xcprivacy` 复制到 `src-tauri/gen/apple/PrivacyInfo.xcprivacy`，确认 Xcode target 包含该文件，在 Xcode 中设置自己的 Signing Team，然后：
+脚本将安装依赖、初始化 iOS 工程并尝试以 `debugging` 导出 IPA，完成后打印 `.ipa` 路径。首次生成工程后，请在 Xcode 检查签名设置，并将 `src-tauri/PrivacyInfo.xcprivacy` 加入应用 target；然后重跑脚本。需要 TestFlight / App Store 构建时，在完成相应证书和描述文件配置后使用 `IOS_EXPORT_METHOD=release-testing` 或 `app-store-connect`。可手动执行：
 
 ```sh
 npm run tauri -- ios dev
-# 签名、真机验证完成后构建发行版
-npm run tauri -- ios build
+npm run tauri -- ios build --export-method debugging
 ```
 
-iOS 不能直接安装 Mac `.app` 或 Windows `.exe`；分发需 Apple 签名及相应发布流程。本包不包含已签名 IPA。Android 安装 SDK/NDK 后使用 `npm run tauri -- android init` / `android dev` / `android build`，同样需要真机验证。
+iOS 不能直接安装 Mac `.app` 或 Windows `.exe`。本仓库尚无 Apple 签名身份，因而不包含已签名、可安装的 IPA；构建脚本须在 Mac 执行，并经真机验证。Ad Hoc 分发需注册设备并使用相应描述文件。Android 安装 SDK/NDK 后使用 `npm run tauri -- android init` / `android dev` / `android build`，同样需要真机验证。
 
 ## 开发与测试
 
