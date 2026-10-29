@@ -3,7 +3,7 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={planned:'想看',watching:'正在看',completed:'已看完',paused:'暂停',dropped:'弃番',unreviewed:'待整理'};
 const kindLabels={first:'首次观看',rewatch:'重看',imported:'Kazumi 来源快照'};
-let state,page='library',filter='all',query='',tag='',sort='recent',pageNum=1,selected=new Set(),remote=localStorage.getItem('at.remote')==='yes',lastImport=null;
+let state,page='library',filter='all',query='',tag='',sort='recent',pageNum=1,selected=new Set(),remote=localStorage.getItem('at.remote')!=='no',lastImport=null;
 const pageSize=24;
 const iconPaths={
  library:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
