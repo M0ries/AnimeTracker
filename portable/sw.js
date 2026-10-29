@@ -1,5 +1,5 @@
 /* Offline shell only. User records stay in IndexedDB; they are never cached by this worker. */
-const VERSION='animetracker-static-2.0.4';
+const VERSION='animetracker-static-2.0.5';
 const ASSETS=['./','./index.html','./bridge.mjs','./worker.mjs','./runtime.mjs','./storage.mjs','./api.py','./store.py','./app.js','./style.css','./app-shell.css','./minimal.css','./manifest.webmanifest','./icons/at.svg','./icons/at-32.png','./icons/at-180.png','./icons/at-192.png','./icons/at-512.png','./vendor/pyodide/pyodide.mjs','./vendor/pyodide/pyodide.asm.mjs','./vendor/pyodide/pyodide.asm.wasm','./vendor/pyodide/python_stdlib.zip','./vendor/pyodide/pyodide-lock.json'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(VERSION);
