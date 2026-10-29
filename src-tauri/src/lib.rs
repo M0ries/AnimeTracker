@@ -59,13 +59,18 @@ fn open_bangumi(app: tauri::AppHandle, id: u32) -> Result<(),String> {
     if id == 0 || id > 2147483647 { return Err("无效的 Bangumi ID".into()); }
     app.opener().open_url(format!("https://bgm.tv/subject/{id}"), None::<&str>).map_err(|e|e.to_string())
 }
+#[tauri::command]
+fn open_kazumi(app: tauri::AppHandle, id: u32) -> Result<(),String> {
+    if id == 0 || id > 2147483647 { return Err("无效的 Bangumi ID".into()); }
+    app.opener().open_url(format!("kazumi://bangumi/{id}"), None::<&str>).map_err(|e|e.to_string())
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![storage_load,storage_save,open_bangumi])
+        .invoke_handler(tauri::generate_handler![storage_load,storage_save,open_bangumi,open_kazumi])
         .run(tauri::generate_context!())
         .expect("AnimeTracker failed to start");
 }
