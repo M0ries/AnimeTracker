@@ -408,6 +408,19 @@ class Store:
                     if c.execute(f'SELECT 1 FROM {t} WHERE id=?',(r['id'],)).fetchone(): report['skipped']+=1
                     else:self.insert(c,t,r);report['imported']+=1
         return report
+    def sync_replace(self,doc,expected):
+        """Replace a validated cloud document only if local data is still unchanged."""
+        self._validate_native(doc)
+        if self.export()['tables'] != expected.get('tables'):
+            raise ValueError('本地记录已改变，同步已停止，请重试')
+        with tempfile.TemporaryDirectory(dir=self.path.parent) as td:
+            fresh=Store(Path(td)/'clean.db')
+            fresh.import_native(doc)
+            backup=self.backup()
+            if self.export()['tables'] != expected['tables']:
+                raise ValueError('本地记录已改变，同步已停止，请重试')
+            os.replace(fresh.path,self.path)
+        return dict(restored=True,safety_backup=str(backup))
     def import_doc(self,doc):
         if not isinstance(doc,dict):raise ValueError('JSON 根节点须为对象')
         if 'schemaVersion' in doc and 'histories' in doc:

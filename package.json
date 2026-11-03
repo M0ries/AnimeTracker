@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
-    "test:portable": "node portable/tests/runtime.test.mjs"
+    "test:portable": "node portable/tests/runtime.test.mjs && node portable/tests/cloud-sync.test.mjs"
   },
   "dependencies": {
     "pyodide": "314.0.7"

@@ -52,6 +52,7 @@ def dispatch(path, d):
     if path == 'merge':
         s.merge(d['source'],d['target'],d.get('confirm',False));return {'merged':True}
     if path == 'import/json': return s.import_doc(d['document'])
+    if path == 'sync/replace': return s.sync_replace(d['document'],d['expected'])
     if path == 'import/csv': return s.import_csv(d['content'])
     if path == 'backup':
         f=s.backup();return {'filename':f.name,'base64':base64.b64encode(f.read_bytes()).decode()}
