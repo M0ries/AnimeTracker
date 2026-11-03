@@ -142,8 +142,20 @@ async function act(action){
  else if(action==='bangumi-search')searchBangumi();
  else if(action==='reset-filters'){filter='all';query='';tag='';pageNum=1;renderLibrary();}
  else if(action==='focus-search'){if(page!=='library'){page='library';render();}$('#search').focus();$('#search').select();}
- else if(action==='about')modal('设置',`<div class="about-head"><img src="/icons/at.svg" alt="AT"><div><h2>AnimeTracker</h2><p>2.0.0</p></div></div><div class="actions"><button data-action="toggle-theme">切换深浅主题</button><button data-action="install-options">获取应用</button></div><div class="hr"></div><p class="muted">同步：尚未启用</p><p class="helper">当前记录保存在此设备。可通过“数据”导出或迁移资料库。</p><div class="about-shortcuts"><span><kbd>⌘ / Ctrl K</kbd> 搜索</span><span><kbd>Esc</kbd> 关闭</span></div>`);
- else if(action==='install-options')modal('使用方式',`<div class="panel"><h3>网页版</h3><p class="muted">iPhone Safari：分享 → 添加到主屏幕。Mac / Windows：在浏览器菜单中安装应用。无需签名。</p><a class="button" href="https://m0ries.github.io/AnimeTracker/" target="_blank" rel="noopener noreferrer">打开网页版 ↗</a></div><div class="panel"><h3>Mac / Windows 桌面版</h3><p class="muted">可从 GitHub Actions 构建并下载；安装包尚未在所有设备上验证。</p><a class="button" href="https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml" target="_blank" rel="noopener noreferrer">查看桌面构建 ↗</a></div><div class="panel"><h3>iPhone / iPad IPA</h3><p class="muted">仓库提供 IPA 构建脚本；目前没有可直接安装的已签名 IPA。构建与安装需要 Apple 签名。</p><a class="button" href="https://github.com/M0ries/AnimeTracker#iphone--ipad" target="_blank" rel="noopener noreferrer">查看 IPA 构建说明 ↗</a></div><p class="helper">当前各设备资料独立；跨设备同步尚未启用。</p>`);
+ else if(action==='about')modal('设置',`<div class="about-head"><img src="/icons/at.svg" alt="AT"><div><h2>AnimeTracker</h2><p>2.0.0</p></div></div><div class="actions"><button data-action="toggle-theme">切换深浅主题</button><button data-action="install-options">获取应用</button></div><div class="hr"></div><p class="muted">${window.ATSync?(window.ATSync.signedIn?'同步账号：'+esc(window.ATSync.email):'多端同步：未登录'):'同步：尚未启用'}</p><div class="actions">${window.ATSync?(window.ATSync.signedIn?'<button data-action="sync-now">立即同步</button><button data-action="sync-logout">退出账号</button>':'<button data-action="sync-login">登录 / 注册同步账号</button>'):''}</div><p class="helper">本地资料始终保留。云端和本地都改动时会停止同步；操作前可在“数据”导出备份。</p><div class="about-shortcuts"><span><kbd>⌘ / Ctrl K</kbd> 搜索</span><span><kbd>Esc</kbd> 关闭</span></div>`);
+ else if(action==='install-options')modal('使用方式',`<div class="panel"><h3>网页版</h3><p class="muted">iPhone Safari：分享 → 添加到主屏幕。Mac / Windows：在浏览器菜单中安装应用。无需签名。</p><a class="button" href="https://m0ries.github.io/AnimeTracker/" target="_blank" rel="noopener noreferrer">打开网页版 ↗</a></div><div class="panel"><h3>Mac / Windows 桌面版</h3><p class="muted">可从 GitHub Actions 构建并下载；安装包尚未在所有设备上验证。</p><a class="button" href="https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml" target="_blank" rel="noopener noreferrer">查看桌面构建 ↗</a></div><div class="panel"><h3>iPhone / iPad IPA</h3><p class="muted">仓库提供 IPA 构建脚本；目前没有可直接安装的已签名 IPA。构建与安装需要 Apple 签名。</p><a class="button" href="https://github.com/M0ries/AnimeTracker#iphone--ipad" target="_blank" rel="noopener noreferrer">查看 IPA 构建说明 ↗</a></div><p class="helper">登录同步账号后可跨设备同步；未登录时各设备资料独立。</p>`);
+ else if(action==='sync-login'){
+  modal('多端同步',`<p class="muted">使用邮箱和密码登录。第一次使用可注册；若需要验证邮箱，请先完成邮件验证。</p><form id="edit-form"><label class="field">邮箱<input name="email" type="email" required autocomplete="email"></label><label class="field">密码<input name="password" type="password" required minlength="6" autocomplete="current-password"></label><p class="form-error" role="alert"></p><div class="actions"><button class="primary" type="submit">登录</button><button type="button" data-action="sync-register">注册</button></div></form>`);
+  bindForm(async d=>{await window.ATSync.login(d.email,d.password);await window.ATSync.syncNow();$('#dialog').close();await load();toast('同步已连接');});
+ }
+ else if(action==='sync-register'){
+  const f=$('#edit-form');const email=f.elements.email.value,password=f.elements.password.value;
+  if(!email||!password){f.querySelector('.form-error').textContent='请填写邮箱和密码';return;}
+  try{const signedIn=await window.ATSync.login(email,password,true);if(signedIn){await window.ATSync.syncNow();$('#dialog').close();await load();}else f.querySelector('.form-error').textContent='已发送确认邮件；确认后请点击登录';}
+  catch(e){f.querySelector('.form-error').textContent=e.message;}
+ }
+ else if(action==='sync-now'){try{await window.ATSync.syncNow();await load();$('#dialog').close();toast('同步完成');}catch(e){toast(e.message);}}
+ else if(action==='sync-logout'){window.ATSync.logout();$('#dialog').close();toast('已退出同步账号');}
  else if(action==='toggle-theme')toggleTheme();
  else if(action==='go-data'){page='data';render();}
  else if(action==='close')$('#dialog').close();
@@ -185,4 +197,6 @@ $('#close-dialog').onclick=()=>$('#dialog').close();
 if(localStorage.getItem('at.theme')==='dark')document.body.classList.add('dark');
 function toggleTheme(){document.body.classList.toggle('dark');const dark=document.body.classList.contains('dark');localStorage.setItem('at.theme',dark?'dark':'light');$('#theme').setAttribute('aria-pressed',String(dark));}
 $('#theme').setAttribute('aria-pressed',String(document.body.classList.contains('dark')));$('#theme').onclick=toggleTheme;
+window.addEventListener('at-sync-updated',()=>load().catch(e=>toast(e.message)));
+window.addEventListener('at-sync-status',e=>{if(e.detail.startsWith('同步暂停'))toast(e.detail);});
 load().catch(e=>{$('#fatal').hidden=false;$('#fatal').textContent='启动失败：'+e.message+(window.ATPlatform?'。请重新打开应用。':'。请确认本地服务仍在运行，然后刷新页面。');$('#content').innerHTML='';});

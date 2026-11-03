@@ -8,7 +8,9 @@ create table if not exists public.at_snapshots (
 alter table public.at_snapshots enable row level security;
 revoke all on public.at_snapshots from anon;
 grant select, insert on public.at_snapshots to authenticated;
+drop policy if exists "read own AT snapshot" on public.at_snapshots;
 create policy "read own AT snapshot" on public.at_snapshots for select to authenticated using (auth.uid() = user_id);
+drop policy if exists "insert own AT snapshot" on public.at_snapshots;
 create policy "insert own AT snapshot" on public.at_snapshots for insert to authenticated with check (auth.uid() = user_id and revision = 1);
 create or replace function public.at_compare_and_swap(expected_revision bigint, next_document jsonb)
 returns bigint language plpgsql security definer set search_path = '' as $$

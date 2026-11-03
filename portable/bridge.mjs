@@ -1,4 +1,6 @@
 import {BrowserStorage,NativeStorage} from './storage.mjs';
+import {ATSync} from './cloud-sync.mjs';
+window.ATSync=ATSync;
 const native=Boolean(window.__TAURI__?.core);
 const storage=native?new NativeStorage():new BrowserStorage();
 const worker=new Worker(new URL('./worker.mjs',import.meta.url),{type:'module'});
@@ -24,7 +26,7 @@ window.fetch=async(resource,options={})=>{
   const url=new URL(typeof resource==='string'?resource:resource.url,location.href);
   if(url.origin===location.origin&&url.pathname.includes('/api/')){
     const path=url.pathname.split('/api/')[1];
-    try{const result=await call(path,options.body?JSON.parse(options.body):{});return new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}});}
+    try{const result=await call(path,options.body?JSON.parse(options.body):{});if(options.method==='POST'&&path!=='sync/replace')queueMicrotask(()=>ATSync.changed());return new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}});}
     catch(e){return new Response(JSON.stringify({error:String(e)}),{status:400,headers:{'Content-Type':'application/json'}});}
   }
   return originalFetch(resource,options);
@@ -72,3 +74,7 @@ if(!native&&navigator.storage?.persist)navigator.storage.persist().catch(()=>{})
 if(!native&&'serviceWorker' in navigator&&location.protocol==='https:'){
   navigator.serviceWorker.register(new URL('./sw.js',import.meta.url),{scope:'./'}).catch(()=>{});
 }
+
+ready.then(()=>{if(ATSync.signedIn)ATSync.syncNow().catch(()=>{});}).catch(()=>{});
+setInterval(()=>{if(ATSync.signedIn)ATSync.syncNow().catch(()=>{});},60000);
+window.addEventListener('online',()=>{if(ATSync.signedIn)ATSync.syncNow().catch(()=>{});});
