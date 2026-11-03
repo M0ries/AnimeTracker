@@ -410,7 +410,51 @@ class Store:
         return report
     def import_doc(self,doc):
         if not isinstance(doc,dict):raise ValueError('JSON 根节点须为对象')
+        if 'schemaVersion' in doc and 'histories' in doc:
+            doc=self.kazumi_snapshot(doc)
         return self.import_kazumi(doc) if doc.get('format')=='kazumi-history-v1' else self.import_native(doc)
+    @staticmethod
+    def kazumi_snapshot(doc):
+        """Convert Kazumi's native history snapshot without touching remote data."""
+        if type(doc.get('schemaVersion')) is not int or doc['schemaVersion']!=1:
+            raise ValueError('不支持的 Kazumi 快照版本')
+        histories=doc.get('histories')
+        if not isinstance(histories,list) or len(histories)>50000:
+            raise ValueError('Kazumi 快照须包含 histories 列表（最多 50000 条）')
+        result=[];keys=set()
+        for index,h in enumerate(histories):
+            try:
+                if not isinstance(h,dict):raise ValueError('记录不是对象')
+                b=h['bangumiItem']
+                if not isinstance(b,dict):raise ValueError('番剧资料不是对象')
+                bid=integer(b.get('id'),0,2147483647)
+                adapter=text(h.get('adapterName',''),500)
+                kind=h.get('entryKind','online')
+                if kind not in ('online','offline'):raise ValueError('未知来源类型')
+                key=f'{adapter}{bid}::{kind}'
+                if key in keys:raise ValueError('重复 History key')
+                keys.add(key)
+                stamp=h.get('lastWatchTime')
+                if type(stamp) is not int or not 0<=stamp<=253402300799000:
+                    raise ValueError('观看时间无效')
+                progresses=h.get('progresses',{})
+                if not isinstance(progresses,dict):raise ValueError('播放进度不是对象')
+                ps=[]
+                for pk,p in progresses.items():
+                    if not isinstance(p,dict):raise ValueError('播放进度格式无效')
+                    ps.append(dict(key=pk,episode=p['episode'],road=p.get('road',0),
+                        progress_ms=p.get('progressMs',0),updated_at_ms=p.get('updatedAtMs',0)))
+                result.append(dict(history_key=key,hive_key=key,adapter_name=adapter,entry_kind=kind,
+                    last_watch_episode=h.get('lastWatchEpisode',0),
+                    last_watch_time=datetime.fromtimestamp(stamp/1000,timezone.utc).isoformat(),
+                    last_watch_episode_name=h.get('lastWatchEpisodeName',''),last_src=h.get('lastSrc',''),
+                    episode_page_url=h.get('episodePageUrl',''),progresses=ps,
+                    bangumi=dict(id=bid,name=b.get('name',''),name_cn=b.get('nameCn',''),
+                        images=b.get('images') or {},summary=b.get('summary',''),air_date=b.get('airDate',''),
+                        tags=b.get('tags') or [],aliases=b.get('alias') or [])))
+            except (KeyError,TypeError,ValueError,OverflowError) as error:
+                raise ValueError(f'Kazumi 快照第 {index+1} 条格式无效：{error}') from error
+        return dict(format='kazumi-history-v1',histories=result)
     def export_csv(self):
         buf=io.StringIO(newline='');w=csv.writer(buf);w.writerow(['table','id','name','payload_json'])
         for t,rows in self.export()['tables'].items():
