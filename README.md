@@ -108,3 +108,9 @@ npm run app:dev
 ### Kazumi 云端快照导入
 
 在“数据 → 导入 JSON”选择 InfiniCLOUD 的 `kazumiSync/history/snapshot.json`（schemaVersion 1）。重复导入相同快照会跳过；更新仅作用于来源进度，不覆盖个人笔记和手动观看轮次。此功能是手动快照导入，不会连接 WebDAV，也不包含快照生成后 `changes` 中的增量记录。
+
+### 只读 WebDAV 快照导入（需自行部署 Worker）
+
+`cloudflare/kazumi-webdav-worker.mjs` 是固定来源的只读中转：只允许 `https://m0ries.github.io` 从 `https://ajiro.infini-cloud.net/dav/kazumiSync/history/snapshot.json` 读取快照；不会写入 WebDAV。把文件部署为你自己的 Cloudflare Worker，然后在 AT 的“数据”页填写 Worker 基础地址、WebDAV 用户名和密码，点击“读取并导入”。浏览器仅保存 Worker 地址与用户名，密码只在本次请求中发送给你的 Worker，再用于读取 InfiniCLOUD。不要使用他人提供的 Worker，或把密码写进源码。
+
+此功能是按需读取 **snapshot.json**，不是完整实时同步；Kazumi 的 `history/changes/*.jsonl` 可能含有快照生成后的记录，暂未合并。AT 个人笔记和手动观看轮次不被覆盖。网页无法直接向 InfiniCLOUD 发带认证的跨域请求，因此未部署 Worker 时继续使用手动导入文件。
