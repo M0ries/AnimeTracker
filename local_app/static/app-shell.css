@@ -18,3 +18,4 @@ dialog{border-radius:20px;max-width:800px;box-shadow:0 30px 120px #17122355}dial
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .topbar-about{display:flex;padding:7px;background:transparent;border:0;color:var(--muted)}.topbar-about svg{width:17px;height:17px}
+.sync-entry{padding:6px 11px;white-space:nowrap;color:var(--accent);background:var(--accentbg);border-color:transparent;font-size:11px;font-weight:600}.sync-entry[hidden]{display:none}
