@@ -7,7 +7,7 @@
 | 平台 | 入口 | 当前状态 |
 | --- | --- | --- |
 | 网页版 | [立即打开 AT](https://m0ries.github.io/AnimeTracker/) | 可直接使用；iPhone 可添加到主屏幕 |
-| iOS / iPadOS | [查看 IPA 构建说明](#iphone--ipad) | 提供源码和脚本；安装 IPA 仍需 Apple 签名，暂无现成安装包 |
+| iOS / iPadOS | [查看未签名 IPA 构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-unsigned-ios.yml) | 构建成功后从 Artifacts 下载；安装前仍需自行签名 |
 | macOS | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Mac 验证 |
 | Windows | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Windows 验证 |
 
@@ -92,7 +92,7 @@ npm run tauri -- ios build --export-method debugging
 
 iOS 不能直接安装 Mac `.app` 或 Windows `.exe`。本仓库尚无 Apple 签名身份，因而不包含已签名、可安装的 IPA；构建脚本须在 Mac 执行，并经真机验证。Ad Hoc 分发需注册设备并使用相应描述文件。Android 安装 SDK/NDK 后使用 `npm run tauri -- android init` / `android dev` / `android build`，同样需要真机验证。
 
-## 开发与测试
+构建未签名 IPA：打开 **Actions → Build unsigned iOS IPA**，运行工作流并下载 `AnimeTracker-iOS-unsigned`。该压缩包内的 `.ipa` 是给侧载工具重新签名用的原始包，不能直接在普通 iPhone 上安装。构建依赖 GitHub 的 macOS runner；若构建失败，以 Actions 日志为准。\n\n## 开发与测试
 
 ```sh
 npm ci
