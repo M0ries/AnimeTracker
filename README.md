@@ -8,8 +8,10 @@
 | --- | --- | --- |
 | 网页版 | [立即打开 AT](https://m0ries.github.io/AnimeTracker/) | 可直接使用；iPhone 可添加到主屏幕 |
 | iOS / iPadOS | [查看 IPA 构建说明](#iphone--ipad) | 提供源码和脚本；安装 IPA 仍需 Apple 签名，暂无现成安装包 |
-| macOS | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Mac 验证 |
-| Windows | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Windows 验证 |
+| macOS | [查看桌面构建](https://github.com/M0ries/AnimeTracker/releases/latest/download/AnimeTracker-macOS-Apple-Silicon.dmg) | Apple Silicon 直接下载；Intel 见下方说明，未签名，安装需验证 |
+| Windows | [查看桌面构建](https://github.com/M0ries/AnimeTracker/releases/latest/download/AnimeTracker-Windows-x64.exe) | 可直接下载安装包；未签名，安装需验证 |
+
+[Intel Mac 下载](https://github.com/M0ries/AnimeTracker/releases/latest/download/AnimeTracker-macOS-Intel.dmg)。桌面安装包来自自动构建的最新 Release；iOS 暂无可直接安装的已签名 IPA。
 
 网页版直接使用；各端登录同一个 AT 同步账号后可同步个人记录。首次请从有记录的设备登录并上传。配置见 [多端同步说明](sync/README.md)。
 
@@ -119,3 +121,5 @@ npm run app:dev
 ### Kazumi 云端快照导入
 
 在“数据 → 导入 JSON”选择 InfiniCLOUD 的 `kazumiSync/history/snapshot.json`（schemaVersion 1）。重复导入相同快照会跳过；更新仅作用于来源进度，不覆盖个人笔记和手动观看轮次。此功能是手动快照导入，不会连接 WebDAV，也不包含快照生成后 `changes` 中的增量记录。
+
+原生 Mac / Windows App 的“数据 → WebDAV”还可填写 HTTPS WebDAV 根地址和应用密码，直接读取该快照并导入 AT，或将完整 AT JSON 备份保存到同一 WebDAV 下独立的 `AnimeTracker/` 目录。每次手动填写凭据；不会保存密码、修改 Kazumi 的文件或自动合并增量记录。网页版由于跨域限制不提供直连；AT 的自动多端同步仍使用 Supabase，WebDAV 目前只做手动导入和备份。
