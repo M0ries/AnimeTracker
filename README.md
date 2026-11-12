@@ -2,7 +2,16 @@
 
 本地动漫记录工具。
 
-在 AT 的“设置 → 获取应用”可以选择网页版、Mac / Windows 桌面版或 iOS IPA 构建说明。网页版直接使用；桌面版需构建并验证；仓库目前不提供已签名、可直接安装的 IPA。各端同步需完成 Supabase 项目的 `sync/supabase.sql` 配置并登录，详见 `sync/README.md`。
+## 支持平台与获取
+
+| 平台 | 入口 | 当前状态 |
+| --- | --- | --- |
+| 网页版 | [立即打开 AT](https://m0ries.github.io/AnimeTracker/) | 可直接使用；iPhone 可添加到主屏幕 |
+| iOS / iPadOS | [查看 IPA 构建说明](#iphone--ipad) | 提供源码和脚本；安装 IPA 仍需 Apple 签名，暂无现成安装包 |
+| macOS | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Mac 验证 |
+| Windows | [查看桌面构建](https://github.com/M0ries/AnimeTracker/actions/workflows/build-apps.yml) | 提供构建流程；安装包需在 Windows 验证 |
+
+网页版直接使用；各端登录同一个 AT 同步账号后可同步个人记录。首次请从有记录的设备登录并上传。配置见 [多端同步说明](sync/README.md)。
 
 
 本包是**跨平台 App 源码**，不是已经签名的安装包。界面已简化；桌面入口改为 Tauri 独立窗口，不再调用终端或 Safari。运行时打包在应用内部，安装成品后不需要 Python、Node.js 或本地服务器。
