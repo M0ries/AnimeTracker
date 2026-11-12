@@ -1,0 +1,37 @@
+name: Build unsigned iOS IPA
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+      - run: npm ci
+      - run: npm run test:portable
+      - run: npm run tauri -- ios init --ci
+      - run: npm run tauri -- ios build --no-sign --archive-only --ci
+      - name: Package unsigned app as IPA
+        shell: bash
+        run: |
+          app=$(find src-tauri/gen/apple/build -type d -path '*/Products/Applications/*.app' -print -quit)
+          test -n "$app"
+          mkdir -p unsigned/Payload
+          cp -R "$app" unsigned/Payload/
+          cd unsigned
+          zip -qr ../AnimeTracker-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AnimeTracker-iOS-unsigned
+          path: AnimeTracker-unsigned.ipa
+          if-no-files-found: error
