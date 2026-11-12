@@ -4,6 +4,7 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
+use std::time::Duration;
 
 const MAX_BYTES: u64 = 512 * 1024 * 1024;
 #[derive(Default, Serialize, Deserialize)]
@@ -59,13 +60,47 @@ fn open_bangumi(app: tauri::AppHandle, id: u32) -> Result<(),String> {
     if id == 0 || id > 2147483647 { return Err("无效的 Bangumi ID".into()); }
     app.opener().open_url(format!("https://bgm.tv/subject/{id}"), None::<&str>).map_err(|e|e.to_string())
 }
+fn dav_client(base: &str) -> Result<(reqwest::Client, reqwest::Url), String> {
+    let raw = format!("{}/", base.trim().trim_end_matches('/'));
+    let url = reqwest::Url::parse(&raw).map_err(|_| "WebDAV 地址无效")?;
+    if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.query().is_some() || url.fragment().is_some() {
+        return Err("请输入 HTTPS WebDAV 根地址，不要把密码写进网址".into());
+    }
+    let client = reqwest::Client::builder().timeout(Duration::from_secs(30)).redirect(reqwest::redirect::Policy::none()).build().map_err(|e| e.to_string())?;
+    Ok((client, url))
+}
+#[tauri::command]
+async fn webdav_read_kazumi(base: String, username: String, password: String) -> Result<String,String> {
+    let (client, root) = dav_client(&base)?;
+    let url = root.join("kazumiSync/history/snapshot.json").map_err(|e| e.to_string())?;
+    let response = client.get(url).basic_auth(username, Some(password)).send().await.map_err(|e| e.to_string())?;
+    if !response.status().is_success() { return Err(format!("读取 Kazumi 快照失败：HTTP {}", response.status())); }
+    if response.content_length().is_some_and(|n| n > 16 * 1024 * 1024) { return Err("Kazumi 快照超过 16 MiB".into()); }
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    if bytes.len() > 16 * 1024 * 1024 { return Err("Kazumi 快照超过 16 MiB".into()); }
+    String::from_utf8(bytes.to_vec()).map_err(|_| "Kazumi 快照不是 UTF-8 JSON".into())
+}
+#[tauri::command]
+async fn webdav_backup_at(base: String, username: String, password: String, document: String, filename: String) -> Result<String,String> {
+    if document.len() > 16 * 1024 * 1024 || serde_json::from_str::<serde_json::Value>(&document).is_err() { return Err("AT JSON 无效或超过 16 MiB".into()); }
+    if !filename.starts_with("AT-") || !filename.ends_with(".json") || !filename.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'.') { return Err("备份文件名无效".into()); }
+    let (client, root) = dav_client(&base)?;
+    let folder = root.join("AnimeTracker/").map_err(|e| e.to_string())?;
+    let mkcol = reqwest::Method::from_bytes(b"MKCOL").map_err(|e| e.to_string())?;
+    let created = client.request(mkcol, folder.clone()).basic_auth(&username, Some(&password)).send().await.map_err(|e| e.to_string())?;
+    if !created.status().is_success() && created.status().as_u16() != 405 { return Err(format!("创建 AT 独立目录失败：HTTP {}", created.status())); }
+    let target = folder.join(&filename).map_err(|e| e.to_string())?;
+    let response = client.put(target).basic_auth(username, Some(password)).header("If-None-Match", "*").header("Content-Type", "application/json").body(document).send().await.map_err(|e| e.to_string())?;
+    if !response.status().is_success() { return Err(format!("上传 AT 备份失败：HTTP {}", response.status())); }
+    Ok(format!("AnimeTracker/{filename}"))
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![storage_load,storage_save,open_bangumi])
+        .invoke_handler(tauri::generate_handler![storage_load,storage_save,open_bangumi,webdav_read_kazumi,webdav_backup_at])
         .run(tauri::generate_context!())
         .expect("AnimeTracker failed to start");
 }
